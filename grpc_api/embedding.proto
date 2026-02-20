@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package embedding;
+
+// Embedding service definition
+service EmbeddingService {
+    // Generate embedding for a single text
+    rpc Embed (EmbedRequest) returns (EmbedResponse);
+
+    // Generate embeddings for multiple texts (batch)
+    rpc EmbedBatch (BatchEmbedRequest) returns (BatchEmbedResponse);
+
+    // Health check
+    rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// Single text embedding request
+message EmbedRequest {
+    string text = 1;
+}
+
+// Single text embedding response
+message EmbedResponse {
+    repeated float embedding = 1;
+    int32 dimension = 2;
+    float inference_time_ms = 3;
+}
+
+// Batch embedding request
+message BatchEmbedRequest {
+    repeated string texts = 1;
+}
+
+// Batch embedding response
+message BatchEmbedResponse {
+    repeated EmbeddingVector embeddings = 1;
+    int32 count = 2;
+    int32 dimension = 3;
+    float inference_time_ms = 4;
+}
+
+// Helper message for batch embeddings
+message EmbeddingVector {
+    repeated float values = 1;
+}
+
+// Health check request
+message HealthCheckRequest {}
+
+// Health check response
+message HealthCheckResponse {
+    string status = 1;
+    string model = 2;
+    int32 embedding_dimension = 3;
+}
