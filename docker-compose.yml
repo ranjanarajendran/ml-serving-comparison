@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  # REST API with HTTP/2 support
+  rest-api:
+    build:
+      context: .
+      dockerfile: rest_api/Dockerfile
+    container_name: ml-rest-api
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./shared:/app/shared
+    networks:
+      - ml-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # gRPC API (HTTP/2 native)
+  grpc-api:
+    build:
+      context: .
+      dockerfile: grpc_api/Dockerfile
+    container_name: ml-grpc-api
+    ports:
+      - "50051:50051"  # gRPC service
+      - "8001:8001"    # Prometheus metrics
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./shared:/app/shared
+    networks:
+      - ml-network
+
+  # GraphQL API with HTTP/2 support
+  graphql-api:
+    build:
+      context: .
+      dockerfile: graphql_api/Dockerfile
+    container_name: ml-graphql-api
+    ports:
+      - "8002:8001"  # Map to 8002 on host to avoid conflict
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./shared:/app/shared
+    networks:
+      - ml-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ml-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - ml-network
+    depends_on:
+      - rest-api
+      - grpc-api
+      - graphql-api
+
+  # Grafana for metrics visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ml-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    networks:
+      - ml-network
+    depends_on:
+      - prometheus
+
+networks:
+  ml-network:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:

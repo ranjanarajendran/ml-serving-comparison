@@ -1,0 +1,29 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'ml-serving-comparison'
+
+scrape_configs:
+  # REST API metrics
+  - job_name: 'rest-api'
+    static_configs:
+      - targets: ['rest-api:8000']
+    metrics_path: '/metrics'
+
+  # gRPC API metrics
+  - job_name: 'grpc-api'
+    static_configs:
+      - targets: ['grpc-api:8001']
+    metrics_path: '/metrics'
+
+  # GraphQL API metrics
+  - job_name: 'graphql-api'
+    static_configs:
+      - targets: ['graphql-api:8001']
+    metrics_path: '/metrics'
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
